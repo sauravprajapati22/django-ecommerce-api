@@ -7,6 +7,7 @@ from cart.models import Cart
 from products.models import Product
 from .models import Order, OrderItem,Payment
 from .serializers import OrderSerializer,PaymentSerializer
+from rest_framework import status,serializers
 
 # Create your views here.
 
@@ -14,10 +15,13 @@ class CheckoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self,request):
-        cart = Cart.objects.get(user = request.user)
+        try:
+            cart = Cart.objects.get(user=request.user)
+        except Cart.DoesNotExist:
+            return Response({"error": "Cart is empty"}, status=status.HTTP_400_BAD_REQUEST)
 
         if not cart.items.exists():
-            return Response({'error':'Cart is Empty'})
+            return Response({'error':'Cart is Empty'}, status=status.HTTP_400_BAD_REQUEST)
         
         with transaction.atomic():
             order = Order.objects.create(user=request.user)
@@ -26,8 +30,9 @@ class CheckoutView(APIView):
                 product = item.product
 
                 if product.stock < item.quantity:
-                    return Response({
-                        "error":f'{product.name} Out of stock'})
+                    raise serializers.ValidationError({
+                        "error": f"{product.name} only {product.stock} in stock"
+                    })
                 
                 OrderItem.objects.create(order=order,product=product,price=product.price,quantity=item.quantity)
                 product.stock -=  item.quantity
@@ -35,9 +40,11 @@ class CheckoutView(APIView):
 
             cart.items.all().delete()
 
-        serializer = OrderSerializer(order)
-
-        return Response(serializer.data) 
+        return Response({
+            "order_id": order.id,
+            "total_price": order.total_price,
+            "message": "Order placed successfully"
+        })
 
 class PaymentView(APIView):
 

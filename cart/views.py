@@ -1,49 +1,37 @@
 from django.shortcuts import render
 from .serializers import CartSerializer,CartItemSerializer
 from .models import Cart,CartItem
-from rest_framework.generics import UpdateAPIView,DestroyAPIView
+from rest_framework.generics import UpdateAPIView,DestroyAPIView,RetrieveAPIView,CreateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from products.models import Product
 from rest_framework.views import APIView
 # Create your views here.
 
-class AddToCartView(APIView):
+class AddToCartView(CreateAPIView):
+    serializer_class = CartItemSerializer
     permission_classes = [IsAuthenticated]
 
-    def post(self,request):
-        product_id = request.data.get('product_id')
-        quantity = int(request.data.get('quantity',1))
-        product = Product.objects.get(id = product_id)
-        cart, created = Cart.objects.get_or_create(user = request.user)
-        cart_item ,created = CartItem.objects.get_or_create(cart=cart , product=product)
+    def perform_create(self, serializer):
+        cart, created = Cart.objects.get_or_create(user=self.request.user)
 
-        if not created:
-            cart_item.quantity += quantity
-        else:
-            cart_item.quantity = quantity
-        cart_item.save()
-
-        serializer = CartSerializer(cart)
-
-        return Response(serializer.data)
-
-class CartView(APIView):
-
+        product = serializer.validated_data['product']
+        item, created = CartItem.objects.get_or_create(cart=cart, product=product)
+        item.quantity += serializer.validated_data.get('quantity', 1)
+        item.save()
+        
+class CartView(RetrieveAPIView):
+    serializer_class = CartSerializer
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-
-        cart, created = Cart.objects.get_or_create(user=request.user)
-
-        serializer = CartSerializer(cart)
-
-        return Response(serializer.data)
+    def get_object(self):
+        cart, created = Cart.objects.prefetch_related('items__product').get_or_create(user=self.request.user)
+        return cart
 
 class UpdateCartItemView(UpdateAPIView):
     queryset = CartItem.objects.all()
     serializer_class = CartItemSerializer
-    permission_class = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def perform_update(self,serializer):
         serializer.save()  
