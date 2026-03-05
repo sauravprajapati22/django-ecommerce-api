@@ -19,7 +19,7 @@ class AddToCartView(CreateAPIView):
         item, created = CartItem.objects.get_or_create(cart=cart, product=product)
         item.quantity += serializer.validated_data.get('quantity', 1)
         item.save()
-        
+
 class CartView(RetrieveAPIView):
     serializer_class = CartSerializer
     permission_classes = [IsAuthenticated]
@@ -36,7 +36,13 @@ class UpdateCartItemView(UpdateAPIView):
     def perform_update(self,serializer):
         serializer.save()  
 
+    def get_queryset(self):
+        # sirf apne cart items hi modify kar sakta hai
+        return CartItem.objects.filter(cart__user=self.request.user)
+    
 class RemoveCartItemView(DestroyAPIView):
     queryset = CartItem.objects.all()
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        return CartItem.objects.filter(cart__user=self.request.user)
