@@ -17,6 +17,8 @@ class Order(models.Model):
     def __str__(self):
         return f"Order {self.id}"
 
+    # Auto calculate total price
+    @property
     def total_price(self):
         return sum(
             item.price * item.quantity

@@ -15,6 +15,9 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = ["id","status","created_at","items"]
 
+        def get_total_price(self,obj):
+            return obj.total_price
+        
 class PaymentSerializer(serializers.ModelSerializer):
 
     class Meta:
