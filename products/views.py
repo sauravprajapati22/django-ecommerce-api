@@ -11,7 +11,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter]
     filterset_fields = ['category','is_available','price']
     search_fields = ['name','description']
-    ordring_fields = ['price','created_at']
+    ordering_fields = ['price','created_at']
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
